@@ -1,0 +1,20 @@
+{
+  "short_name": "Paintly",
+  "name": "Paintly - Paint & Utility Shop SaaS",
+  "description": "Smart cloud management SaaS for paint mixing, tint calculations, utilities inventory, and fast billing for hardware and paint stores.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#4f46e5",
+  "categories": ["business", "productivity", "utilities"]
+}

@@ -1,0 +1,215 @@
+import React, { useState } from 'react';
+import { Palette, Eye, EyeOff, ArrowRight, ArrowLeft, AlertCircle, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
+interface SignUpPageProps {
+  onNavigateSignIn: () => void;
+  onNavigateHome: () => void;
+  onSuccess: () => void;
+}
+
+export const SignUpPage: React.FC<SignUpPageProps> = ({
+  onNavigateSignIn,
+  onNavigateHome,
+  onSuccess,
+}) => {
+  const { signIn } = useAuth();
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Pakistani phone pattern: 0300 1111111 / 03XXXXXXXXX / +923XXXXXXXXX
+  const PK_PHONE_REGEX = /^(?:\+92|92|0)?3[0-9]{2}[\s-]?[0-9]{7}$/;
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Real-time input formatter for Pakistani mobile template if user types digits starting with 03
+  const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value;
+    if (val.length > 80) return; // Character limit
+    setIdentifier(val);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const trimmed = identifier.trim();
+
+    if (!trimmed) {
+      setError('Please provide your phone number or email.');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter a password.');
+      return;
+    }
+
+    // Verification template checks
+    if (trimmed.includes('@')) {
+      if (!EMAIL_REGEX.test(trimmed)) {
+        setError('Please enter a valid email address (e.g., owner@paintshop.pk).');
+        return;
+      }
+    } else {
+      if (!PK_PHONE_REGEX.test(trimmed)) {
+        setError('Please enter a valid Pakistani phone number (e.g., 0300 1111111 or 03001111111).');
+        return;
+      }
+    }
+
+    if (password.length < 6 || password.length > 50) {
+      setError('Password must be between 6 and 50 characters.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiUrl}/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier: trimmed,
+          password,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create account.');
+      }
+
+      signIn(data.token, data.user);
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-1/4 -right-20 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -left-20 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Back to landing */}
+      <button
+        onClick={onNavigateHome}
+        className="absolute top-8 left-8 flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors cursor-pointer"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>Back to Home</span>
+      </button>
+
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex p-3 bg-gradient-to-tr from-amber-500 to-indigo-600 rounded-2xl shadow-xl shadow-indigo-500/20 mb-4">
+            <Palette className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">Create Shop Account</h1>
+          <p className="text-slate-400 text-sm mt-2">
+            Quick sign up with your phone number or email and password
+          </p>
+        </div>
+
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-400 text-sm">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Field 1: Phone or Email */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Phone Number or Email
+                </label>
+                <span className="text-[10px] text-slate-500 font-mono">Max 80 chars</span>
+              </div>
+              <input
+                type="text"
+                value={identifier}
+                onChange={handleIdentifierChange}
+                placeholder="0300 1111111 or owner@paintshop.pk"
+                maxLength={80}
+                required
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              />
+              <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                Template: <span className="text-amber-400 font-mono">0300 1111111</span> or standard email
+              </p>
+            </div>
+
+            {/* Field 2: Password */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Password
+                </label>
+                <span className="text-[10px] text-slate-500 font-mono">6 - 50 chars</span>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  minLength={6}
+                  maxLength={50}
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-200 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer mt-4"
+            >
+              {loading ? (
+                <span>Creating Account...</span>
+              ) : (
+                <>
+                  <span>Sign Up</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-slate-800 text-center">
+            <p className="text-sm text-slate-400">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={onNavigateSignIn}
+                className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer"
+              >
+                Sign In here
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

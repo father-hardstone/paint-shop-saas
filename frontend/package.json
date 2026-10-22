@@ -1,0 +1,29 @@
+{
+  "name": "paintly",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^0.435.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "javascript-obfuscator": "^5.9.0",
+    "rollup-plugin-javascript-obfuscator": "^1.0.4",
+    "tailwindcss": "^4.0.0",
+    "typescript": "~5.5.3",
+    "vite": "^6.0.0"
+  }
+}
