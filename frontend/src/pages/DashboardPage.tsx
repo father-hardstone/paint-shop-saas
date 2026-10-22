@@ -4,13 +4,7 @@ import {
   Receipt, 
   Plus, 
   Search, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Clock, 
-  Filter,
-  TrendingDown,
-  Layers,
-  ArrowUpRight
+  Filter
 } from 'lucide-react';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../context/AuthContext';
@@ -56,7 +50,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onSignOut,
   onNavigateSettings 
 }) => {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<'inventory' | 'billing'>('inventory');
 
   // Inventory state
@@ -80,14 +74,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [selectedItemQty, setSelectedItemQty] = useState('1');
   const [selectedItemPrice, setSelectedItemPrice] = useState('');
 
-  const [loading, setLoading] = useState(false);
-
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   // Fetch Inventory and Invoices
   const fetchData = async () => {
     try {
-      setLoading(true);
       const headers = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -108,8 +99,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
