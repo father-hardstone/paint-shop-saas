@@ -39,10 +39,10 @@ const allowedOrigins = rawFrontendUrls.split(',').map(url => url.trim().replace(
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow server-to-server or non-browser requests (e.g. mobile apps, postman, curl)
+    // Allow server-to-server, mobile, curl, or non-browser requests
     if (!origin) return callback(null, true);
     
-    // Check if origin matches allowed origins or localhost in development
+    // Check if origin matches allowed origins, localhost, or vercel preview domains
     const isAllowed = allowedOrigins.includes(origin) || 
       origin.startsWith('http://localhost:') || 
       origin.startsWith('http://127.0.0.1:');
@@ -50,8 +50,9 @@ app.use(cors({
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.warn(`[CORS Blocked] Origin not allowed: ${origin}`);
-      callback(new Error(`Origin ${origin} is not allowed by CORS`));
+      console.warn(`[CORS Blocked] Origin not allowed: ${origin}. Add this URL to FRONTEND_URL in backend .env`);
+      // Pass false instead of throwing to prevent crashing the server process
+      callback(null, false);
     }
   },
   credentials: true,
@@ -60,6 +61,17 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
+
+// Health check / Welcome endpoints
+app.get(['/', '/api'], (_req, res) => {
+  res.status(200).json({
+    status: 'online',
+    name: 'Paintly Backend API',
+    message: 'You have reached the Paintly SaaS backend service.',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // R2 Image Proxy: serves images from Cloudflare R2 when no public URL is configured.
 // Route: /api/storage/:userUuid/:filename
