@@ -9,6 +9,7 @@ import {
   Settings
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getBackendOrigin } from '../config/api';
 
 interface TopBarProps {
   onSignOut: () => void;
@@ -38,7 +39,7 @@ export const TopBar: React.FC<TopBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const backendOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+  const backendOrigin = getBackendOrigin();
   
   // Icon and Name replacement rule:
   // Public routes: ALWAYS show Paintly icon & Paintly name.

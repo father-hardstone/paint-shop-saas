@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../context/AuthContext';
+import { getApiUrl, getBackendOrigin } from '../config/api';
 
 interface SettingsPageProps {
   onSignOut: () => void;
@@ -40,7 +41,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   );
 
   // Images state
-  const backendOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+  const backendOrigin = getBackendOrigin();
   const resolveImg = (url?: string) => {
     if (!url) return null;
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -100,7 +101,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     setStatus(null);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const apiUrl = getApiUrl();
       const payload: any = {
         name,
         shopName,

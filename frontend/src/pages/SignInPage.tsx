@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Palette, Eye, EyeOff, ArrowRight, ArrowLeft, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getApiUrl } from '../config/api';
 
 interface SignInPageProps {
   onNavigateSignUp: () => void;
@@ -32,7 +33,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
     setLoading(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/auth/signin`, {
         method: 'POST',
         headers: {

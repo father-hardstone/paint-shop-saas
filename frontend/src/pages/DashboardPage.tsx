@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../context/AuthContext';
+import { getApiUrl } from '../config/api';
 
 interface InventoryItem {
   id: string;
@@ -74,7 +75,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [selectedItemQty, setSelectedItemQty] = useState('1');
   const [selectedItemPrice, setSelectedItemPrice] = useState('');
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const API_URL = getApiUrl();
 
   // Fetch Inventory and Invoices
   const fetchData = async () => {
