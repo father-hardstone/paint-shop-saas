@@ -82,6 +82,8 @@ function AppContent() {
         isAuthenticated={isAuthenticated}
         onNavigateHome={() => navigateTo('landing')}
         onNavigateDashboard={() => navigateTo('dashboard')}
+        onNavigateSignIn={() => navigateTo('signin')}
+        onNavigateSignUp={() => navigateTo('signup')}
       />
     );
   } else if (isAuthenticated) {
