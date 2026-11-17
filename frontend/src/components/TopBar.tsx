@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getBackendOrigin } from '../config/api';
+import { ThemeToggle } from './ThemeToggle';
 
 interface TopBarProps {
   onSignOut: () => void;
@@ -94,6 +95,8 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Right side: Circular profile avatar (simply clicking opens dropdown, no chevron, no extra buttons) */}
         {!isPublic && (
+          <div className="flex items-center gap-3">
+          <ThemeToggle inline />
           <div className="relative" ref={dropdownRef}>
             <button
               id="user-profile-circle-btn"
@@ -178,6 +181,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 </div>
               </div>
             )}
+          </div>
           </div>
         )}
       </div>

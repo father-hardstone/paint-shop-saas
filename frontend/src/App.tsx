@@ -177,8 +177,8 @@ function AppContent() {
   return (
     <>
       {pageContent}
-      {/* Floating round Day/Night mode button at the bottom */}
-      <ThemeToggle />
+      {/* Signed-in pages have the toggle in the top bar; public pages keep the floating round button */}
+      {!(isAuthenticated && currentView !== '404') && <ThemeToggle />}
     </>
   );
 }
