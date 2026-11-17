@@ -13,6 +13,7 @@ import {
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl, getBackendOrigin } from '../config/api';
+import { Spinner } from '../components/Spinner';
 
 interface SettingsPageProps {
   onSignOut: () => void;
@@ -386,7 +387,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-xs sm:text-sm transition-all shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 cursor-pointer"
             >
               {saving ? (
-                <span>Saving...</span>
+                <>
+                  <Spinner className="w-3.5 h-3.5" />
+                  <span>Saving...</span>
+                </>
               ) : (
                 <>
                   <Save className="w-3.5 h-3.5" />

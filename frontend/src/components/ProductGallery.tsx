@@ -17,6 +17,7 @@ interface Props {
 /** Carousel with a side list of thumbnails. Falls back to the product swatch when there are no photos. */
 export const ProductGallery: React.FC<Props> = ({ item, urls, canEdit, busy, maxImages, onAdd, onRemove }) => {
   const [index, setIndex] = useState(0);
+  const [loaded, setLoaded] = useState<Record<string, boolean>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const touchX = useRef<number | null>(null);
   const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -42,11 +43,11 @@ export const ProductGallery: React.FC<Props> = ({ item, urls, canEdit, busy, max
   const canAddMore = canEdit && count < maxImages;
 
   return (
-    <div className="flex flex-col-reverse md:flex-row gap-3">
+    <div className="flex flex-col-reverse lg:flex-row gap-3">
       {/* Side list of all images */}
       {(count > 1 || canAddMore) && (
-        <div className="md:relative md:w-[84px] shrink-0">
-          <div className="flex md:flex-col gap-2 overflow-auto md:absolute md:inset-0 pb-1 md:pb-0 md:pr-1" role="list" aria-label="Product images">
+        <div className="lg:relative lg:w-[84px] shrink-0">
+          <div className="flex lg:flex-col gap-2 overflow-auto lg:absolute lg:inset-0 pb-1 lg:pb-0 lg:pr-1" role="list" aria-label="Product images">
             {urls.map((u, i) => (
               <button
                 key={u}
@@ -55,7 +56,7 @@ export const ProductGallery: React.FC<Props> = ({ item, urls, canEdit, busy, max
                 onClick={() => setIndex(i)}
                 aria-label={`Show photo ${i + 1}`}
                 aria-current={i === index}
-                className={`relative shrink-0 w-[72px] h-[72px] md:w-[76px] md:h-[76px] rounded-xl overflow-hidden border-2 transition-colors cursor-pointer ${
+                className={`relative shrink-0 w-[72px] h-[72px] lg:w-[76px] lg:h-[76px] rounded-xl overflow-hidden border-2 transition-colors cursor-pointer ${
                   i === index ? 'border-indigo-500' : 'border-slate-800 light:border-slate-300 opacity-70 hover:opacity-100'
                 }`}
               >
@@ -68,7 +69,7 @@ export const ProductGallery: React.FC<Props> = ({ item, urls, canEdit, busy, max
                 onClick={() => fileRef.current?.click()}
                 disabled={busy}
                 aria-label="Add photos"
-                className="shrink-0 w-[72px] h-[72px] md:w-[76px] md:h-[76px] rounded-xl border-2 border-dashed border-slate-700 light:border-slate-300 text-slate-500 hover:border-indigo-500 hover:text-indigo-400 flex items-center justify-center cursor-pointer disabled:opacity-50"
+                className="shrink-0 w-[72px] h-[72px] lg:w-[76px] lg:h-[76px] rounded-xl border-2 border-dashed border-slate-700 light:border-slate-300 text-slate-500 hover:border-indigo-500 hover:text-indigo-400 flex items-center justify-center cursor-pointer disabled:opacity-50"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
               </button>
@@ -95,8 +96,15 @@ export const ProductGallery: React.FC<Props> = ({ item, urls, canEdit, busy, max
         ) : (
           <div className="flex h-full transition-transform duration-300 ease-out" style={{ transform: `translateX(-${index * 100}%)` }}>
             {urls.map((u, i) => (
-              <img key={u} src={resolveProductImage(u) || u} alt={`${item.name} photo ${i + 1}`} className="w-full h-full shrink-0 object-cover" draggable={false} />
+              <img key={u} src={resolveProductImage(u) || u} alt={`${item.name} photo ${i + 1}`} className="w-full h-full shrink-0 object-cover" draggable={false}
+                onLoad={() => setLoaded((l) => ({ ...l, [u]: true }))} onError={() => setLoaded((l) => ({ ...l, [u]: true }))} />
             ))}
+          </div>
+        )}
+
+        {count > 0 && !loaded[urls[index]] && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 pointer-events-none" role="status" aria-label="Loading photo">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
           </div>
         )}
 

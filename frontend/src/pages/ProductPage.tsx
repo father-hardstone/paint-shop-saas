@@ -7,6 +7,7 @@ import type { ProductLike } from '../components/ProductCard';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config/api';
 import { fileToResizedDataUrl } from '../utils/productImage';
+import { LoadingBlock } from '../components/Spinner';
 
 interface Product extends ProductLike {
   sku?: string;
@@ -34,6 +35,7 @@ export const ProductPage: React.FC<Props> = ({ productId, onBack, onSignOut, onN
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [sku, setSku] = useState('');
@@ -66,6 +68,7 @@ export const ProductPage: React.FC<Props> = ({ productId, onBack, onSignOut, onN
   }, [productId, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async (body: Record<string, unknown>) => {
+    if (saving) return false;
     setSaving(true);
     setError('');
     try {
@@ -85,13 +88,17 @@ export const ProductPage: React.FC<Props> = ({ productId, onBack, onSignOut, onN
   const MAX_IMAGES = 8;
 
   const onAddImages = async (files: File[]) => {
+    if (saving || processing) return;
     const room = MAX_IMAGES - (product?.imageUrls?.length || 0);
+    setProcessing(true);
     try {
       const converted = await Promise.all(files.slice(0, room).map((f) => fileToResizedDataUrl(f)));
       const ok = await save({ addImages: converted });
       if (ok && files.length > room) setError(`Only ${MAX_IMAGES} photos per product; extra files were skipped.`);
     } catch (err: any) {
       setError(err.message || 'Could not use that image.');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -127,17 +134,17 @@ export const ProductPage: React.FC<Props> = ({ productId, onBack, onSignOut, onN
           <ArrowLeft className="w-4 h-4" /> Back to inventory
         </button>
 
-        {loading && <div className="flex items-center gap-2 text-slate-400"><Loader2 className="w-4 h-4 animate-spin" /> Loading product…</div>}
+        {loading && <LoadingBlock label="Loading product…" className="py-24" />}
         {!loading && !product && <p className="text-slate-400 light:text-slate-600">{error}</p>}
 
         {product && status && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
             {/* Gallery: carousel + side list of all photos */}
             <ProductGallery
               item={product}
               urls={product.imageUrls || []}
               canEdit={canEdit}
-              busy={saving}
+              busy={saving || processing}
               maxImages={MAX_IMAGES}
               onAdd={onAddImages}
               onRemove={onRemoveImage}
@@ -172,7 +179,7 @@ export const ProductPage: React.FC<Props> = ({ productId, onBack, onSignOut, onN
                     <button type="submit" disabled={saving} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save
                     </button>
-                    <button type="button" onClick={() => setEditing(false)} className="px-4 py-2 rounded-xl border border-slate-700 light:border-slate-300 text-sm font-semibold text-slate-300 light:text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                    <button type="button" disabled={saving} onClick={() => setEditing(false)} className="disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-xl border border-slate-700 light:border-slate-300 text-sm font-semibold text-slate-300 light:text-slate-700 flex items-center gap-1.5 cursor-pointer">
                       <X className="w-4 h-4" /> Cancel
                     </button>
                   </div>
@@ -196,7 +203,7 @@ export const ProductPage: React.FC<Props> = ({ productId, onBack, onSignOut, onN
               </dl>
 
               {canEdit && !editing && (
-                <button onClick={startEdit} className="mt-5 px-4 py-2 rounded-xl border border-slate-700 light:border-slate-300 text-sm font-semibold text-slate-200 light:text-slate-800 hover:border-indigo-500 flex items-center gap-2 cursor-pointer">
+                <button onClick={startEdit} disabled={saving || processing} className="disabled:opacity-50 disabled:cursor-not-allowed mt-5 px-4 py-2 rounded-xl border border-slate-700 light:border-slate-300 text-sm font-semibold text-slate-200 light:text-slate-800 hover:border-indigo-500 flex items-center gap-2 cursor-pointer">
                   <Pencil className="w-4 h-4" /> Edit details
                 </button>
               )}

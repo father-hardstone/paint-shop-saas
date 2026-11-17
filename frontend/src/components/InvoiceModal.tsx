@@ -208,7 +208,7 @@ export const InvoiceModal: React.FC<Props> = ({ token, inventory, onClose, onCre
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || submitting) return;
     setSubmitting(true);
     setError('');
     try {
@@ -253,7 +253,7 @@ export const InvoiceModal: React.FC<Props> = ({ token, inventory, onClose, onCre
             </h3>
             <p className="text-xs text-slate-400 light:text-slate-600">Invoice number and date are generated automatically.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-white light:hover:text-slate-900 hover:bg-slate-800 light:hover:bg-slate-200 cursor-pointer">
+          <button type="button" onClick={onClose} disabled={submitting} aria-label="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-white light:hover:text-slate-900 hover:bg-slate-800 light:hover:bg-slate-200 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -292,7 +292,7 @@ export const InvoiceModal: React.FC<Props> = ({ token, inventory, onClose, onCre
                     </div>
 
                     <div className="flex items-center gap-4 justify-between sm:justify-end">
-                      <div className="flex flex-col items-center">
+                      <div className="flex items-center gap-3">
                         <div className="flex items-center rounded-xl border border-slate-700 light:border-slate-300 overflow-hidden">
                           <button type="button" disabled={!stock || line.qty <= 1} onClick={() => setQty(line, line.qty - 1)} className="px-2.5 py-2 text-slate-300 light:text-slate-700 hover:bg-slate-800 light:hover:bg-slate-200 disabled:opacity-30 cursor-pointer" aria-label="Decrease quantity">
                             <Minus className="w-3.5 h-3.5" />
@@ -309,8 +309,13 @@ export const InvoiceModal: React.FC<Props> = ({ token, inventory, onClose, onCre
                             <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                        <span className="text-[11px] text-slate-400 light:text-slate-600 mt-1">
-                          {stock ? `${stock.quantity} ${stock.unit} available` : '—'}
+                        <span className="min-w-[84px] text-xs text-slate-400 light:text-slate-600 leading-tight">
+                          {stock ? (
+                            <>
+                              <span className="block font-mono font-bold text-sm text-slate-200 light:text-slate-800">{stock.quantity}</span>
+                              <span>{stock.unit} available</span>
+                            </>
+                          ) : '—'}
                         </span>
                       </div>
                       <div className="w-24 text-right font-mono font-bold text-white light:text-slate-900 text-sm">
@@ -376,7 +381,7 @@ export const InvoiceModal: React.FC<Props> = ({ token, inventory, onClose, onCre
           {error && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{error}</p>}
 
           <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="px-5 py-3 rounded-xl border border-slate-800 light:border-slate-300 text-slate-300 light:text-slate-700 text-sm font-semibold hover:bg-slate-800 light:hover:bg-slate-200 cursor-pointer">
+            <button type="button" onClick={onClose} disabled={submitting} className="disabled:opacity-50 disabled:cursor-not-allowed px-5 py-3 rounded-xl border border-slate-800 light:border-slate-300 text-slate-300 light:text-slate-700 text-sm font-semibold hover:bg-slate-800 light:hover:bg-slate-200 cursor-pointer">
               Cancel
             </button>
             <button

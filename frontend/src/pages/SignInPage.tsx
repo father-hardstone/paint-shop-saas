@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Palette, Eye, EyeOff, ArrowRight, ArrowLeft, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getApiUrl } from '../config/api';
+import { Spinner } from '../components/Spinner';
 
 interface SignInPageProps {
   onNavigateSignUp: () => void;
@@ -146,7 +147,10 @@ export const SignInPage: React.FC<SignInPageProps> = ({
               className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
               {loading ? (
-                <span>Signing In...</span>
+                <>
+                  <Spinner />
+                  <span>Signing in...</span>
+                </>
               ) : (
                 <>
                   <span>Sign In</span>

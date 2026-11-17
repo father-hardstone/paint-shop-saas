@@ -19,6 +19,7 @@ import type { CreatedInvoice } from '../components/InvoiceModal';
 import { generateInvoicePdf } from '../utils/invoicePdf';
 import { ProductCard } from '../components/ProductCard';
 import { fileToResizedDataUrl } from '../utils/productImage';
+import { Spinner, LoadingBlock } from '../components/Spinner';
 
 interface InventoryItem {
   id: string;
@@ -85,8 +86,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [newInvDescription, setNewInvDescription] = useState('');
   const [addError, setAddError] = useState('');
   const [addSaving, setAddSaving] = useState(false);
+  const [imageProcessing, setImageProcessing] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [printingId, setPrintingId] = useState<string | null>(null);
   const [inventoryView, setInventoryView] = useState<'table' | 'cards'>(() => {
-    try { return localStorage.getItem('inventoryView') === 'cards' ? 'cards' : 'table'; } catch { return 'table'; }
+    try { return localStorage.getItem('inventoryView') === 'table' ? 'table' : 'cards'; } catch { return 'cards'; }
   });
   const changeView = (v: 'table' | 'cards') => {
     setInventoryView(v);
@@ -102,6 +106,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // Fetch Inventory and Invoices
   const fetchData = async () => {
+    setDataLoading(true);
     try {
       const headers = {
         'Content-Type': 'application/json',
@@ -123,6 +128,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -137,6 +144,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     const files = Array.from(e.target.files || []);
     e.target.value = '';
     if (!files.length) return;
+    setImageProcessing(true);
     try {
       const room = MAX_IMAGES - newInvImages.length;
       const converted = await Promise.all(files.slice(0, room).map((f) => fileToResizedDataUrl(f)));
@@ -144,6 +152,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       setAddError(files.length > room ? `Only ${MAX_IMAGES} photos per product; extra files were skipped.` : '');
     } catch (err: any) {
       setAddError(err.message || 'Could not use that image.');
+    } finally {
+      setImageProcessing(false);
     }
   };
 
@@ -198,6 +208,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // Build and download the PDF for an invoice using the shop profile
   const printInvoice = async (inv: CreatedInvoice | BillingInvoice) => {
+    if (printingId) return;
+    setPrintingId(inv.id);
     const resolve = (path?: string) => {
       if (!path) return null;
       return path.startsWith('http') ? path : `${getBackendOrigin()}${path}`;
@@ -216,6 +228,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       );
     } catch (err) {
       console.error('PDF generation failed:', err);
+    } finally {
+      setPrintingId(null);
     }
   };
 
@@ -256,7 +270,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* Tabs Bar — centered horizontally */}
       <div className="border-b border-slate-800 light:border-slate-300 bg-slate-900/60 light:bg-white backdrop-blur-md sticky top-16 z-40 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center h-14">
+          <div className="relative flex items-center justify-center h-14">
             
             {/* Animated Tab Switcher Buttons — centered */}
             <div className="flex items-center gap-1.5 p-1 bg-slate-950/80 light:bg-slate-100 rounded-2xl border border-slate-800/80 light:border-slate-300">
@@ -304,6 +318,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </button>
             </div>
 
+            {dataLoading && (
+              <span className="absolute right-4 sm:right-6 lg:right-8 flex items-center gap-2 text-xs text-slate-400 light:text-slate-600">
+                <Spinner /> <span className="hidden sm:inline">Updating…</span>
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -379,7 +398,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
             {/* Storefront-style product cards */}
             {inventoryView === 'cards' && (
-              filteredInventory.length === 0 ? (
+              dataLoading && inventory.length === 0 ? (
+                <LoadingBlock label="Loading inventory…" className="py-16" />
+              ) : filteredInventory.length === 0 ? (
                 <div className="rounded-2xl border border-slate-800 light:border-slate-300 text-center py-12 text-slate-500 light:text-slate-600 text-xs">
                   No inventory items yet. Click "Add Product" to get started.
                 </div>
@@ -408,7 +429,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 light:divide-slate-200">
-                    {filteredInventory.length === 0 ? (
+                    {dataLoading && inventory.length === 0 ? (
+                      <tr>
+                        <td colSpan={6}><LoadingBlock label="Loading inventory…" className="py-14" /></td>
+                      </tr>
+                    ) : filteredInventory.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="text-center py-12 text-slate-500 light:text-slate-600 text-xs">
                           No inventory items yet. Click "Add Product" to get started.
@@ -492,7 +517,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             {/* Invoices Table — horizontal scroll on small screens */}
             <div className="rounded-2xl bg-slate-900/60 light:bg-white border border-slate-800 light:border-slate-300 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
-                {filteredInvoices.length === 0 ? (
+                {dataLoading && invoices.length === 0 ? (
+                  <LoadingBlock label="Loading invoices…" className="py-14" />
+                ) : filteredInvoices.length === 0 ? (
                   <div className="text-center py-12 text-slate-500 light:text-slate-600 text-xs">
                     No invoices created yet. Click "New Invoice" above to log a sale.
                   </div>
@@ -529,11 +556,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           <td className="py-3.5 px-4 whitespace-nowrap text-right">
                             <button
                               onClick={() => printInvoice(inv)}
+                              disabled={printingId !== null}
                               title="Download invoice PDF"
                               aria-label={`Download PDF for ${inv.invoiceNumber}`}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-white light:hover:text-slate-900 hover:bg-slate-800 light:hover:bg-slate-200 cursor-pointer"
+                              className="disabled:opacity-50 disabled:cursor-not-allowed p-1.5 rounded-lg text-slate-400 hover:text-white light:hover:text-slate-900 hover:bg-slate-800 light:hover:bg-slate-200 cursor-pointer"
                             >
-                              <Printer className="w-4 h-4" />
+                              {printingId === inv.id ? <Spinner /> : <Printer className="w-4 h-4" />}
                             </button>
                           </td>
                         </tr>
@@ -574,7 +602,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       </button>
                     </div>
                   ))}
-                  {newInvImages.length < MAX_IMAGES && (
+                  {imageProcessing && (
+                    <div className="aspect-square rounded-xl border border-slate-700 light:border-slate-300 flex items-center justify-center text-indigo-400" role="status" aria-label="Processing photos">
+                      <Spinner className="w-6 h-6" />
+                    </div>
+                  )}
+                  {newInvImages.length < MAX_IMAGES && !imageProcessing && (
                     <label className="aspect-square rounded-xl border border-dashed border-slate-700 light:border-slate-300 bg-slate-950 light:bg-slate-100 flex flex-col items-center justify-center gap-1 text-slate-500 hover:border-indigo-500 hover:text-indigo-400 cursor-pointer">
                       <ImagePlus className="w-6 h-6" />
                       <span className="text-[10px]">Add</span>
@@ -668,6 +701,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
+                  disabled={addSaving}
                   onClick={() => { setShowAddInventoryModal(false); setAddError(''); }}
                   className="px-4 py-2 rounded-xl bg-slate-800 light:bg-slate-200 text-slate-300 light:text-slate-700 hover:text-white light:hover:text-slate-900 cursor-pointer"
                 >
@@ -675,9 +709,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={addSaving}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-semibold cursor-pointer"
+                  disabled={addSaving || imageProcessing}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold cursor-pointer inline-flex items-center gap-2"
                 >
+                  {addSaving && <Spinner />}
                   {addSaving ? 'Saving...' : 'Save Item'}
                 </button>
               </div>

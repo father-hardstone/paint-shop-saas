@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, Loader2 } from 'lucide-react';
 import { resolveProductImage } from '../utils/productImage';
 import { getCardImageRotateSeconds } from '../config/ui';
 
@@ -26,7 +26,20 @@ export function stockStatus(quantity: number): { label: string; cls: string } {
 /** Product image, falling back to a colour swatch / icon when there is no photo. */
 export const ProductImage: React.FC<{ item: ProductLike; className?: string }> = ({ item, className = '' }) => {
   const src = resolveProductImage(item.imageUrl);
-  if (src) return <img src={src} alt={item.name} loading="lazy" className={`object-cover ${className}`} />;
+  const [loaded, setLoaded] = useState(false);
+  if (src) {
+    return (
+      <div className={`relative overflow-hidden bg-slate-800 light:bg-slate-200 ${className}`}>
+        {!loaded && (
+          <div className="absolute inset-0 flex items-center justify-center text-slate-500" role="status" aria-label="Loading photo">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        )}
+        <img src={src} alt={item.name} loading="lazy" onLoad={() => setLoaded(true)} onError={() => setLoaded(true)}
+          className={`w-full h-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`} />
+      </div>
+    );
+  }
   return (
     <div
       className={`flex items-center justify-center text-slate-500 bg-slate-800 light:bg-slate-200 ${className}`}
