@@ -143,7 +143,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   return (
-    <div className="h-screen max-h-screen flex flex-col bg-slate-950 dark:bg-slate-950 light:bg-slate-100 text-slate-100 dark:text-slate-100 light:text-slate-900 font-sans overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-slate-950 dark:bg-slate-950 light:bg-slate-100 text-slate-100 dark:text-slate-100 light:text-slate-900 font-sans">
       <TopBar 
         onSignOut={onSignOut} 
         onNavigateDashboard={onNavigateDashboard}
@@ -151,7 +151,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       />
 
       {/* Main Single Display View (No scrolling on large screens) */}
-      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 w-full flex flex-col justify-center py-2 sm:py-4">
+      <main className="flex-1 max-w-none mx-auto px-4 sm:px-8 lg:px-12 w-full flex flex-col justify-start py-3">
         {/* Header bar */}
         <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800 dark:border-slate-800 light:border-slate-300 shrink-0">
           <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           )}
         </div>
 
-        <form onSubmit={handleSave} className="flex flex-col gap-3 shrink-0">
+        <form onSubmit={handleSave} className="flex flex-col gap-4 flex-1">
           
           {/* Top Row: Picture & Logo Uploads side-by-side */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
@@ -258,7 +258,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </div>
 
           {/* Form Fields arranged in compact multi-column rows (single screen view) */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/70 dark:bg-slate-900/70 light:bg-white border border-slate-800 dark:border-slate-800 light:border-slate-200 space-y-3">
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/70 dark:bg-slate-900/70 light:bg-white border border-slate-800 dark:border-slate-800 light:border-slate-200 space-y-4 flex-1">
             
             {/* Row 1: Phone Number & Email (whichever was used to sign up is locked, other is open) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

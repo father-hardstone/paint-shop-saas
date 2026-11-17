@@ -13,6 +13,7 @@ import {
   handleUpdateSettings,
   handleGetInventory,
   handleAddInventoryItem,
+  handleUpdateInventoryItem,
   handleGetInvoices,
   handleCreateInvoice
 } from './handlers/auth.js';
@@ -60,7 +61,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
 }));
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '25mb' })); // product photos arrive as base64, up to 8 per request
 
 // Health check / Welcome endpoints
 app.get(['/', '/api'], (_req, res) => {
@@ -74,11 +75,12 @@ app.get(['/', '/api'], (_req, res) => {
 });
 
 // R2 Image Proxy: serves images from Cloudflare R2 when no public URL is configured.
-// Route: /api/storage/:userUuid/:filename
-app.get('/api/storage/:userUuid/:filename', async (req, res) => {
+// Routes: /api/storage/:userUuid/:filename            (profile picture, logo)
+//         /api/storage/:userUuid/:folder/:filename    (product images: folder = product serial number)
+async function proxyStorageImage(req: express.Request, res: express.Response) {
   try {
-    const { userUuid, filename } = req.params;
-    const r2Key = `paint-shop/${userUuid}/${filename}`;
+    const { userUuid, folder, filename } = req.params as Record<string, string>;
+    const r2Key = folder ? `paint-shop/${userUuid}/${folder}/${filename}` : `paint-shop/${userUuid}/${filename}`;
 
     const result = await storageService.getObject(r2Key);
     if (!result || !result.body) {
@@ -98,7 +100,9 @@ app.get('/api/storage/:userUuid/:filename', async (req, res) => {
     console.error('R2 proxy error:', err);
     res.status(500).json({ error: 'Failed to retrieve image.' });
   }
-});
+}
+app.get('/api/storage/:userUuid/:filename', proxyStorageImage);
+app.get('/api/storage/:userUuid/:folder/:filename', proxyStorageImage);
 
 // Public Auth Endpoints
 app.post('/api/auth/signup', handleSignUp);
@@ -117,6 +121,7 @@ app.post('/api/orders', authMiddleware, handleCreateOrder);
 // Dashboard Tabs Endpoints: Inventory & Billing
 app.get('/api/inventory', authMiddleware, handleGetInventory);
 app.post('/api/inventory', authMiddleware, handleAddInventoryItem);
+app.put('/api/inventory/:id', authMiddleware, handleUpdateInventoryItem);
 app.get('/api/billing/invoices', authMiddleware, handleGetInvoices);
 app.post('/api/billing/invoices', authMiddleware, handleCreateInvoice);
 

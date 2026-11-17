@@ -1,1 +1,141 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap");
 @import "tailwindcss";
+
+/* Class-based theme variants (the app toggles `.dark` / `.light` on <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
+
+/*
+ * Theme tokens. Components keep using slate-* / indigo-* / amber-* utilities;
+ * we remap those palettes here so the whole UI re-skins from one place.
+ *   slate  -> warm near-black neutrals
+ *   indigo -> rust-orange brand accent
+ *   amber  -> "low stock" amber
+ */
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+
+  /* Warm neutrals */
+  --color-slate-50: #faf8f5;
+  --color-slate-100: #f1ede8;
+  --color-slate-200: #e2dcd5;
+  --color-slate-300: #d3cdc5;
+  --color-slate-400: #b0a99f;
+  --color-slate-500: #948d83;
+  --color-slate-600: #57524c;
+  --color-slate-700: #3a3631;
+  --color-slate-800: #262321;
+  --color-slate-900: #171513;
+  --color-slate-950: #0e0d0c;
+
+  /* Brand accent: rust orange */
+  --color-indigo-50: #fff4ed;
+  --color-indigo-100: #ffe6d5;
+  --color-indigo-200: #fecaa8;
+  --color-indigo-300: #fda472;
+  --color-indigo-400: #f97f43;
+  --color-indigo-500: #ee5f26;
+  --color-indigo-600: #d94a17;
+  --color-indigo-700: #b43a14;
+  --color-indigo-800: #913118;
+  --color-indigo-900: #772c17;
+  --color-indigo-950: #401408;
+
+  /* Low-stock amber */
+  --color-amber-300: #fcc56b;
+  --color-amber-400: #f5a83a;
+  --color-amber-500: #ee9317;
+  --color-amber-600: #d27a0c;
+
+  /* In-stock green (slightly muted) */
+  --color-emerald-300: #7fd6a8;
+  --color-emerald-400: #4cc48a;
+  --color-emerald-500: #2fa872;
+  --color-emerald-600: #25885c;
+
+  /* Out-of-stock red */
+  --color-red-400: #f5675c;
+  --color-red-500: #e5483d;
+  --color-rose-300: #f6a3a8;
+  --color-rose-400: #f0707a;
+  --color-rose-500: #e2495a;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color-scheme: dark;
+    font-size: 106.25%;
+    line-height: 1.6;
+  }
+  html.light {
+    color-scheme: light;
+  }
+  body {
+    background-color: var(--color-slate-950);
+    color: var(--color-slate-100);
+    letter-spacing: -0.005em;
+  }
+  html.light body {
+    background-color: var(--color-slate-50);
+    color: var(--color-slate-900);
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+
+  code, kbd, pre, samp, .font-mono {
+    font-feature-settings: "zero";
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-indigo-500) 40%, transparent);
+  }
+}
+
+/* Optional helper for editorial italic accents, e.g. <em class="font-accent">22 SKUs</em> */
+.font-accent {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/*
+ * Auto-hiding scrollbars (page and inner scroll areas).
+ * The thumb is transparent at rest and fades in while scrolling (the `is-scrolling`
+ * class is toggled on <html> by src/utils/autoHideScrollbar.ts) or when the pointer is over the thumb.
+ */
+:root {
+  --scrollbar-thumb: color-mix(in srgb, var(--color-slate-400) 55%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--color-slate-300) 80%, transparent);
+}
+html.light {
+  --scrollbar-thumb: color-mix(in srgb, var(--color-slate-600) 45%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--color-slate-700) 70%, transparent);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.3s ease;
+}
+html.is-scrolling ::-webkit-scrollbar-thumb,
+html.is-scrolling::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); }
+::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover) !important; }
+
+/* Firefox: no thumb-hover pseudo, so show on scroll or while hovering the scrolling element */
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  html.is-scrolling, html.is-scrolling *, *:hover { scrollbar-color: var(--scrollbar-thumb) transparent; }
+}

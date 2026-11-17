@@ -57,7 +57,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 light:bg-slate-100 text-slate-100 light:text-slate-800 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
       {/* Background glow */}
       <div className="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -65,7 +65,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
       {/* Back to landing */}
       <button
         onClick={onNavigateHome}
-        className="absolute top-8 left-8 flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors cursor-pointer"
+        className="absolute top-8 left-8 flex items-center gap-2 text-sm text-slate-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Back to Home</span>
@@ -74,15 +74,15 @@ export const SignInPage: React.FC<SignInPageProps> = ({
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex p-3 bg-gradient-to-tr from-amber-500 to-indigo-600 rounded-2xl shadow-xl shadow-indigo-500/20 mb-4">
-            <Palette className="h-8 w-8 text-white" />
+            <Palette className="h-8 w-8 text-white light:text-slate-900" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Sign In to Your Shop</h1>
-          <p className="text-slate-400 text-sm mt-2">
+          <h1 className="text-3xl font-extrabold text-white light:text-slate-900 tracking-tight">Sign In to Your Shop</h1>
+          <p className="text-slate-400 light:text-slate-600 text-sm mt-2">
             Enter your registered Pakistani phone number or email
           </p>
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
+        <div className="bg-slate-900/90 light:bg-white border border-slate-800 light:border-slate-300 rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-400 text-sm">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -93,10 +93,10 @@ export const SignInPage: React.FC<SignInPageProps> = ({
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 light:text-slate-700">
                   Phone Number or Email
                 </label>
-                <span className="text-[10px] text-slate-500 font-mono">Max 80 chars</span>
+                <span className="text-[10px] text-slate-500 light:text-slate-600 font-mono">Max 80 chars</span>
               </div>
               <input
                 type="text"
@@ -105,20 +105,20 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                 placeholder="0300 1111111 or owner@paintshop.pk"
                 maxLength={80}
                 required
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                className="w-full bg-slate-950 light:bg-slate-100 border border-slate-800 light:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-100 light:text-slate-800 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
               />
-              <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5">
+              <p className="text-[11px] text-slate-500 light:text-slate-600 mt-1.5 flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-                Template: <span className="text-slate-300 font-mono">0300 1111111</span> or valid email
+                Template: <span className="text-slate-300 light:text-slate-700 font-mono">0300 1111111</span> or valid email
               </p>
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 light:text-slate-700">
                   Password
                 </label>
-                <span className="text-[10px] text-slate-500 font-mono">Max 50 chars</span>
+                <span className="text-[10px] text-slate-500 light:text-slate-600 font-mono">Max 50 chars</span>
               </div>
               <div className="relative">
                 <input
@@ -128,12 +128,12 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                   placeholder="••••••••"
                   maxLength={50}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors pr-10"
+                  className="w-full bg-slate-950 light:bg-slate-100 border border-slate-800 light:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-100 light:text-slate-800 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-200 cursor-pointer"
+                  className="absolute right-3 top-3 text-slate-400 light:text-slate-600 hover:text-slate-200 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -156,8 +156,8 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-slate-800 text-center">
-            <p className="text-sm text-slate-400">
+          <div className="mt-6 pt-6 border-t border-slate-800 light:border-slate-300 text-center">
+            <p className="text-sm text-slate-400 light:text-slate-600">
               Don't have a shop account?{' '}
               <button
                 type="button"

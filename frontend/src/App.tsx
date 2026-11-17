@@ -5,11 +5,17 @@ import { SignInPage } from './pages/SignInPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ProductPage } from './pages/ProductPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ThemeToggle } from './components/ThemeToggle';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-type ViewMode = 'landing' | 'signin' | 'signup' | 'dashboard' | 'settings' | '404';
+type ViewMode = 'landing' | 'signin' | 'signup' | 'dashboard' | 'settings' | 'product' | '404';
+
+function getProductIdFromPath(): string | null {
+  const m = window.location.pathname.match(/^\/inventory\/([^/]+)\/?$/i);
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
 function getInitialView(): ViewMode {
   const path = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
@@ -18,6 +24,7 @@ function getInitialView(): ViewMode {
   if (path === '/signup' || path === '/register') return 'signup';
   if (path === '/dashboard') return 'dashboard';
   if (path === '/settings') return 'settings';
+  if (getProductIdFromPath()) return 'product';
   return '404';
 }
 
@@ -34,12 +41,19 @@ function AppContent() {
       signup: '/signup',
       dashboard: '/dashboard',
       settings: '/settings',
+      product: '/dashboard',
       '404': '/404'
     };
     const path = pathMap[view] || '/';
     if (window.location.pathname !== path) {
       window.history.pushState({}, '', path);
     }
+  };
+
+  // Product pages live at /inventory/:id
+  const openProduct = (id: string) => {
+    setCurrentView('product');
+    window.history.pushState({}, '', `/inventory/${encodeURIComponent(id)}`);
   };
 
   // Handle browser back/forward buttons
@@ -64,7 +78,7 @@ function AppContent() {
   // Loading state while checking token
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
+      <div className="min-h-screen bg-slate-950 light:bg-slate-100 flex items-center justify-center text-slate-400 light:text-slate-600">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm font-medium">Loading Paintly...</p>
@@ -97,6 +111,19 @@ function AppContent() {
           onNavigateDashboard={() => navigateTo('dashboard')}
         />
       );
+    } else if (currentView === 'product' && getProductIdFromPath()) {
+      pageContent = (
+        <ProductPage
+          key={getProductIdFromPath()!}
+          productId={getProductIdFromPath()!}
+          onBack={() => navigateTo('dashboard')}
+          onSignOut={() => {
+            signOut();
+            navigateTo('landing');
+          }}
+          onNavigateSettings={() => navigateTo('settings')}
+        />
+      );
     } else {
       // Default protected route is dashboard
       pageContent = (
@@ -106,6 +133,7 @@ function AppContent() {
             navigateTo('landing');
           }}
           onNavigateSettings={() => navigateTo('settings')}
+          onOpenProduct={openProduct}
         />
       );
     }
@@ -127,7 +155,7 @@ function AppContent() {
           onSuccess={() => navigateTo('dashboard')}
         />
       );
-    } else if (currentView === 'dashboard' || currentView === 'settings') {
+    } else if (currentView === 'dashboard' || currentView === 'settings' || currentView === 'product') {
       // Unauthorized attempt to access protected pages redirects to signin
       pageContent = (
         <SignInPage

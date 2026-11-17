@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import dotenv from 'dotenv';
 
@@ -80,21 +80,30 @@ class StorageService {
 
     await this.s3Client.send(command);
 
-    // Determine accessible URL
-    let fileUrl: string;
-    if (this.publicUrl) {
-      // Use the configured public domain (r2.dev or custom domain)
-      fileUrl = `${this.publicUrl}/${r2Key}`;
-    } else {
-      // No public URL configured — serve via backend proxy endpoint
-      fileUrl = `/api/storage/${userUuid}/${filename}`;
-    }
+    const fileUrl = this.buildUrl(userUuid, filename);
 
     console.log(`Successfully uploaded image to Cloudflare R2 at ${r2Key}`);
     return {
       url: fileUrl,
       key: r2Key,
     };
+  }
+
+  /**
+   * Public URL for paint-shop/{userUuid}/{relPath}. Uses the configured public domain
+   * if there is one, otherwise the backend proxy route.
+   */
+  buildUrl(userUuid: string, relPath: string): string {
+    if (this.publicUrl) return `${this.publicUrl}/paint-shop/${userUuid}/${relPath}`;
+    return `/api/storage/${userUuid}/${relPath}`;
+  }
+
+  /** Delete paint-shop/{userUuid}/{relPath}. Missing objects are not an error. */
+  async deleteShopImage(userUuid: string, relPath: string): Promise<void> {
+    if (!this.s3Client || !this.bucketName) return;
+    await this.s3Client.send(
+      new DeleteObjectCommand({ Bucket: this.bucketName, Key: `paint-shop/${userUuid}/${relPath}` })
+    );
   }
 
   /**

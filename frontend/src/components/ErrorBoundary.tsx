@@ -45,23 +45,23 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-rose-500/30 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <div className="min-h-screen bg-slate-950 light:bg-slate-100 text-slate-100 light:text-slate-800 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-slate-900 light:bg-white border border-rose-500/30 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 via-amber-500 to-indigo-500" />
             
             <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-rose-500/10">
               <AlertTriangle className="w-7 h-7" />
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-bold text-center text-white mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-center text-white light:text-slate-900 mb-2">
               Something went wrong
             </h1>
-            <p className="text-sm text-slate-400 text-center mb-6 leading-relaxed">
+            <p className="text-sm text-slate-400 light:text-slate-600 text-center mb-6 leading-relaxed">
               Paintly encountered an unexpected error. Don't worry, your data is protected and secured.
             </p>
 
             {this.state.error && (
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 mb-6 text-xs text-rose-300 font-mono overflow-x-auto max-h-32">
+              <div className="bg-slate-950/80 light:bg-slate-100 border border-slate-800 light:border-slate-300 rounded-xl p-3.5 mb-6 text-xs text-rose-300 font-mono overflow-x-auto max-h-32">
                 {this.state.error.message || 'Unknown runtime error'}
               </div>
             )}
@@ -76,7 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </button>
               <button
                 onClick={this.handleReset}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-700"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 light:bg-slate-200 hover:bg-slate-700 light:hover:bg-slate-300 text-slate-200 light:text-slate-800 font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-700 light:border-slate-300"
               >
                 <Home className="w-4 h-4" />
                 Back to Home

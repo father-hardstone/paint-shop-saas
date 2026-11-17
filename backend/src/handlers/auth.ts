@@ -336,24 +336,82 @@ export async function handleUpdateSettings(req: AuthRequest, res: Response): Pro
 }
 
 // Inventory & Billing Handlers
+const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGES_PER_PRODUCT = 8;
+
+/** Adds `imageUrls` (parallel to `images`) and `imageUrl` (the cover) to a product for the client. */
+function withImageUrls(item: any, user?: { uuid: string; id: string }) {
+  const owner = user ? (user.uuid || user.id) : undefined;
+  let imageUrls: string[] = [];
+  if (item.serialNumber && Array.isArray(item.images) && item.images.length && owner) {
+    imageUrls = item.images.map((f: string) => storageService.buildUrl(owner, `${item.serialNumber}/${f}`));
+  } else if (item.imageUrl) {
+    imageUrls = [item.imageUrl];
+  }
+  return { ...item, imageUrls, imageUrl: imageUrls[0] };
+}
+
+// Inventory & Billing Handlers
 export async function handleGetInventory(req: AuthRequest, res: Response): Promise<void> {
   try {
     const items = await dbManager.getInventory(req.user?.id);
-    res.json(items);
+    res.json(items.map((it) => withImageUrls(it, it.userId && it.userId === req.user?.id ? req.user : undefined)));
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to retrieve inventory.' });
   }
 }
 
+/**
+ * Uploads data-URL images to paint-shop/{shop uuid}/{product serial}/{n}.{ext}.
+ * `n` continues from the highest number already used (1, 2, 3, ...).
+ * Returns the new file names plus a message for every image that was rejected.
+ */
+async function saveProductImages(
+  user: { uuid: string; id: string },
+  serialNumber: number,
+  existing: string[],
+  dataUrls: string[]
+): Promise<{ added: string[]; errors: string[] }> {
+  const added: string[] = [];
+  const errors: string[] = [];
+  let next = existing.reduce((m, f) => Math.max(m, parseInt(f, 10) || 0), 0) + 1;
+  const room = Math.max(0, MAX_IMAGES_PER_PRODUCT - existing.length);
+
+  if (dataUrls.length > room) errors.push(`A product can have at most ${MAX_IMAGES_PER_PRODUCT} images; extra images were skipped.`);
+
+  for (const dataUrl of dataUrls.slice(0, room)) {
+    try {
+      const match = typeof dataUrl === 'string' && dataUrl.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,(.+)$/);
+      if (!match) throw new Error('Images must be PNG, JPG or WebP files.');
+      const mimeType = match[1] === 'image/jpg' ? 'image/jpeg' : match[1];
+      const buffer = Buffer.from(match[2], 'base64');
+      if (buffer.length > MAX_PRODUCT_IMAGE_BYTES) throw new Error('Each image must be 5 MB or smaller.');
+      const ext = mimeType === 'image/jpeg' ? 'jpg' : mimeType.split('/')[1];
+      const fileName = `${next}.${ext}`;
+      await storageService.uploadShopImage({
+        userUuid: user.uuid || user.id,
+        filename: `${serialNumber}/${fileName}`,
+        buffer,
+        mimeType,
+      });
+      added.push(fileName);
+      next++;
+    } catch (err: any) {
+      errors.push(err?.message || 'Image upload failed.');
+    }
+  }
+  return { added, errors };
+}
+
 export async function handleAddInventoryItem(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { name, category, unit, quantity, unitPrice, sku, hex } = req.body;
+    const { name, category, unit, quantity, unitPrice, sku, hex, description, images } = req.body;
     if (!name || !category || !unit || quantity === undefined || unitPrice === undefined) {
       res.status(400).json({ error: 'Missing required inventory fields.' });
       return;
     }
 
-    const newItem = await dbManager.addInventoryItem({
+    let newItem = await dbManager.addInventoryItem({
       userId: req.user?.id,
       name: name.trim(),
       category,
@@ -362,11 +420,76 @@ export async function handleAddInventoryItem(req: AuthRequest, res: Response): P
       unitPrice: Number(unitPrice),
       sku: sku ? String(sku).trim() : undefined,
       hex: hex ? String(hex).trim() : undefined,
+      description: description ? String(description).trim() : undefined,
     });
 
-    res.status(201).json(newItem);
+    // The product is saved even if some photos fail to upload; the client is told why.
+    let imageErrors: string[] = [];
+    if (Array.isArray(images) && images.length && req.user && newItem.serialNumber) {
+      const { added, errors } = await saveProductImages(req.user, newItem.serialNumber, [], images);
+      imageErrors = errors;
+      if (added.length) {
+        newItem = (await dbManager.updateInventoryItem(newItem.id, req.user.id, { images: added })) || newItem;
+      }
+    }
+
+    const body: any = withImageUrls(newItem, req.user);
+    if (imageErrors.length) body.imageErrors = imageErrors;
+    res.status(201).json(body);
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to add inventory item.' });
+  }
+}
+
+export async function handleUpdateInventoryItem(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user) { res.status(401).json({ error: 'Unauthorized.' }); return; }
+    const { name, description, unitPrice, sku, addImages, removeImages } = req.body;
+
+    const current = (await dbManager.getInventory(req.user.id)).find((i) => i.id === req.params.id && i.userId === req.user!.id);
+    if (!current) {
+      res.status(404).json({ error: 'Product not found, or it is a shared sample item that cannot be edited.' });
+      return;
+    }
+
+    const updates: Record<string, any> = {};
+    if (typeof name === 'string' && name.trim()) updates.name = name.trim();
+    if (typeof description === 'string') updates.description = description.trim();
+    if (typeof sku === 'string') updates.sku = sku.trim();
+    if (unitPrice !== undefined) {
+      const price = Number(unitPrice);
+      if (!Number.isFinite(price) || price < 0) { res.status(400).json({ error: 'Invalid price.' }); return; }
+      updates.unitPrice = price;
+    }
+
+    // Product images: files live in <shop folder>/<serialNumber>/<n>.<ext>
+    let images = [...(current.images || [])];
+    let imageErrors: string[] = [];
+    const owner = req.user.uuid || req.user.id;
+
+    if (Array.isArray(removeImages) && removeImages.length && current.serialNumber) {
+      for (const f of removeImages) {
+        if (typeof f !== 'string' || !images.includes(f)) continue;
+        try { await storageService.deleteShopImage(owner, `${current.serialNumber}/${f}`); } catch (e) { console.error('Image delete failed:', e); }
+        images = images.filter((x) => x !== f);
+      }
+    }
+    if (Array.isArray(addImages) && addImages.length && current.serialNumber) {
+      const { added, errors } = await saveProductImages(req.user, current.serialNumber, images, addImages);
+      images = [...images, ...added];
+      imageErrors = errors;
+      if (!added.length && errors.length) { res.status(400).json({ error: errors[0] }); return; }
+    }
+    if (Array.isArray(removeImages) || Array.isArray(addImages)) updates.images = images;
+
+    const updated = await dbManager.updateInventoryItem(req.params.id, req.user.id, updates);
+    if (!updated) { res.status(404).json({ error: 'Product not found.' }); return; }
+
+    const body: any = withImageUrls(updated, req.user);
+    if (imageErrors.length) body.imageErrors = imageErrors;
+    res.json(body);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to update inventory item.' });
   }
 }
 
@@ -388,16 +511,25 @@ export async function handleCreateInvoice(req: AuthRequest, res: Response): Prom
     }
 
     let subtotalSum = 0;
-    const formattedItems = items.map((it: any) => {
-      const lineSubtotal = Number(it.quantity) * Number(it.unitPrice);
+    const formattedItems = [];
+    for (const it of items) {
+      const quantity = Number(it.quantity);
+      const unitPrice = Number(it.unitPrice);
+      if (!it.name || !Number.isInteger(quantity) || quantity < 1 || !Number.isFinite(unitPrice) || unitPrice < 0) {
+        res.status(400).json({ error: 'Each line needs a product, a whole quantity of at least 1, and a valid price.' });
+        return;
+      }
+      const lineSubtotal = quantity * unitPrice;
       subtotalSum += lineSubtotal;
-      return {
-        name: it.name,
-        quantity: Number(it.quantity),
-        unitPrice: Number(it.unitPrice),
+      formattedItems.push({
+        inventoryId: it.inventoryId ? String(it.inventoryId) : undefined,
+        name: String(it.name),
+        unit: it.unit ? String(it.unit) : undefined,
+        quantity,
+        unitPrice,
         subtotal: lineSubtotal,
-      };
-    });
+      });
+    }
 
     const tax = Number(taxAmount || 0);
     const discount = Number(discountAmount || 0);
@@ -418,6 +550,10 @@ export async function handleCreateInvoice(req: AuthRequest, res: Response): Prom
 
     res.status(201).json(invoice);
   } catch (error: any) {
+    if (error?.code === 'INSUFFICIENT_STOCK') {
+      res.status(409).json({ error: error.message });
+      return;
+    }
     res.status(500).json({ error: 'Failed to create invoice.' });
   }
 }

@@ -37,6 +37,13 @@ export interface InventoryItem {
   category: 'paint' | 'utility' | 'accessory';
   sku?: string;
   hex?: string;
+  /** Per-shop product serial number (1, 2, 3...). Images live in the bucket under <shop folder>/<serialNumber>/ */
+  serialNumber?: number;
+  /** File names of the product images inside that folder, in display order, e.g. ["1.jpg", "2.jpg"] */
+  images?: string[];
+  /** Legacy single-image field (kept so older products still display) */
+  imageUrl?: string;
+  description?: string;
   unit: 'litres' | 'pieces' | 'cans' | 'rolls' | 'kg';
   quantity: number;
   unitPrice: number;
@@ -52,7 +59,9 @@ export interface BillingInvoice {
   customerPhone?: string;
   customerEmail?: string;
   items: {
+    inventoryId?: string;
     name: string;
+    unit?: string;
     quantity: number;
     unitPrice: number;
     subtotal: number;
@@ -241,16 +250,38 @@ class DatabaseManager {
     return items.map(({ _id, ...rest }: any) => rest);
   }
 
-  async addInventoryItem(item: Omit<InventoryItem, 'id' | 'updatedAt'>): Promise<InventoryItem> {
+  async addInventoryItem(item: Omit<InventoryItem, 'id' | 'updatedAt' | 'serialNumber'>): Promise<InventoryItem> {
     const db = this.getDb();
+    let serialNumber: number | undefined;
+    if (item.userId) {
+      const last = await db.collection('inventory')
+        .find({ userId: item.userId, serialNumber: { $exists: true } })
+        .sort({ serialNumber: -1 })
+        .limit(1)
+        .toArray();
+      serialNumber = ((last[0] as any)?.serialNumber || 0) + 1;
+    }
     const newItem: InventoryItem = {
       ...item,
+      serialNumber,
       id: 'inv_' + Math.random().toString(36).substr(2, 9),
       updatedAt: new Date().toISOString(),
     };
 
     await db.collection('inventory').insertOne(newItem);
     return newItem;
+  }
+
+  async updateInventoryItem(id: string, userId: string, updates: Partial<InventoryItem>): Promise<InventoryItem | null> {
+    const db = this.getDb();
+    const res = await db.collection('inventory').findOneAndUpdate(
+      { id, userId },
+      { $set: { ...updates, updatedAt: new Date().toISOString() } },
+      { returnDocument: 'after' }
+    );
+    if (!res) return null;
+    const { _id, ...rest } = res as any;
+    return rest;
   }
 
   // Billing Operations
@@ -264,20 +295,58 @@ class DatabaseManager {
     return invoices.map(({ _id, ...rest }: any) => rest);
   }
 
+  /**
+   * Creates an invoice and deducts the billed quantities from inventory.
+   * Each deduction is a conditional atomic update (quantity >= requested), so stock can
+   * never go negative. If any line fails, deductions already made are rolled back and
+   * an Error with `code = 'INSUFFICIENT_STOCK'` is thrown.
+   */
   async createInvoice(invoice: Omit<BillingInvoice, 'id' | 'invoiceNumber' | 'createdAt'>): Promise<BillingInvoice> {
     const db = this.getDb();
-    const count = await db.collection('invoices').countDocuments();
+    const inventory = db.collection('inventory');
+    const ownerFilter = invoice.userId
+      ? { $or: [{ userId: invoice.userId }, { userId: { $exists: false } }] }
+      : {};
 
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
-    const newInvoice: BillingInvoice = {
-      ...invoice,
-      id: 'invc_' + Math.random().toString(36).substr(2, 9),
-      invoiceNumber,
-      createdAt: new Date().toISOString(),
+    const deducted: { id: string; qty: number }[] = [];
+    const fail = async (message: string, code: string) => {
+      for (const d of deducted) {
+        await inventory.updateOne({ id: d.id }, { $inc: { quantity: d.qty } });
+      }
+      const err: any = new Error(message);
+      err.code = code;
+      throw err;
     };
 
-    await db.collection('invoices').insertOne(newInvoice);
-    return newInvoice;
+    for (const line of invoice.items) {
+      if (!line.inventoryId) continue;
+      const res = await inventory.updateOne(
+        { id: line.inventoryId, quantity: { $gte: line.quantity }, ...ownerFilter },
+        { $inc: { quantity: -line.quantity }, $set: { updatedAt: new Date().toISOString() } }
+      );
+      if (res.matchedCount === 0) {
+        await fail(`Not enough stock for "${line.name}".`, 'INSUFFICIENT_STOCK');
+      }
+      deducted.push({ id: line.inventoryId, qty: line.quantity });
+    }
+
+    try {
+      const count = await db.collection('invoices').countDocuments(invoice.userId ? { userId: invoice.userId } : {});
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+      const newInvoice: BillingInvoice = {
+        ...invoice,
+        id: 'invc_' + Math.random().toString(36).substr(2, 9),
+        invoiceNumber,
+        createdAt: new Date().toISOString(),
+      };
+      await db.collection('invoices').insertOne(newInvoice);
+      return newInvoice;
+    } catch (e) {
+      for (const d of deducted) {
+        await inventory.updateOne({ id: d.id }, { $inc: { quantity: d.qty } });
+      }
+      throw e;
+    }
   }
 
   // Paint stock API operations
